@@ -45,6 +45,17 @@ Core/Src/tim.c \
 Core/Src/usart.c \
 Core/Src/stm32f4xx_it.c \
 Core/Src/stm32f4xx_hal_msp.c \
+Core/Src/calibration.c \
+Core/Src/drv8323.c \
+Core/Src/flash_writer.c \
+Core/Src/foc.c \
+Core/Src/fsm.c \
+Core/Src/math_ops.c \
+Core/Src/position_sensor.c \
+Core/Src/preference_writer.c \
+Core/Src/stm32f4xx_flash.c \
+Core/Src/syscalls.c \
+Core/Src/sysmem.c \
 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.c \
 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.c \
 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_ll_adc.c \
