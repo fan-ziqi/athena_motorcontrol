@@ -12,9 +12,13 @@ extern "C" {
 #endif
 
 
+#ifdef STM32F446
 #include "stm32f4xx_flash.h"
-#include "stdbool.h"
+#endif
+#include <stdint.h>
+#include <stdbool.h>
 
+#ifdef STM32F446
 /* Base address of the Flash sectors */
 #define ADDR_FLASH_SECTOR_0     ((uint32_t)0x08000000) /* Base @ of Sector 0, 16 Kbytes */
 #define ADDR_FLASH_SECTOR_1     ((uint32_t)0x08004000) /* Base @ of Sector 1, 16 Kbytes */
@@ -29,6 +33,7 @@ static uint32_t __SECTOR_ADDRS[] = {ADDR_FLASH_SECTOR_0, ADDR_FLASH_SECTOR_1, AD
                              ADDR_FLASH_SECTOR_4, ADDR_FLASH_SECTOR_5, ADDR_FLASH_SECTOR_6, ADDR_FLASH_SECTOR_7};
 static uint32_t __SECTORS[] = {FLASH_Sector_0, FLASH_Sector_1, FLASH_Sector_2, FLASH_Sector_3,
                              FLASH_Sector_4, FLASH_Sector_6, FLASH_Sector_6, FLASH_Sector_7};
+#endif
 
 typedef struct {
 	bool ready;

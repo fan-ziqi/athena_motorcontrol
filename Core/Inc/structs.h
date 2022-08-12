@@ -40,7 +40,13 @@ extern EncoderStruct comm_encoder;
 extern DRVStruct drv;
 extern PreferenceWriter prefs;
 extern CalStruct comm_encoder_cal;
+
+#ifdef STM32F446
 extern CANTxMessage can_tx;
 extern CANRxMessage can_rx;
+#else
+extern can_trasnmit_message_struct can_tx;
+extern can_receive_message_struct can_rx;
+#endif
 
 #endif

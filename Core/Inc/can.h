@@ -32,9 +32,11 @@ extern "C" {
 
 /* USER CODE END Includes */
 
+#ifdef STM32F446
 extern CAN_HandleTypeDef hcan1;
 
 /* USER CODE BEGIN Private defines */
+#endif
 //#define P_MIN -12.5f
 //#define P_MAX 12.5f
 //#define V_MIN -65.0f
@@ -45,6 +47,7 @@ extern CAN_HandleTypeDef hcan1;
 //#define KD_MAX 5.0f
 #define T_MIN -18.0f
 #define T_MAX 18.0f
+#ifdef STM32F446
 /* USER CODE END Private defines */
 
 void MX_CAN1_Init(void);
@@ -69,6 +72,14 @@ void pack_reply(CANTxMessage *msg, uint8_t id, float p, float v, float t);
 void unpack_cmd(CANRxMessage msg, float *commands);
 /* USER CODE END Prototypes */
 
+#else
+void can_rx_init(can_receive_message_struct *msg);
+void can_tx_init(can_trasnmit_message_struct *msg);
+void pack_reply(can_trasnmit_message_struct *msg, uint8_t id, float p, float v, float t);
+void unpack_cmd(can_receive_message_struct msg, float *commands);
+
+void MX_CAN0_Init(void);
+#endif
 #ifdef __cplusplus
 }
 #endif

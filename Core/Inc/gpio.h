@@ -28,6 +28,7 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
+#ifdef STM32F446
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
@@ -42,6 +43,9 @@ void MX_GPIO_Init(void);
 
 /* USER CODE END Prototypes */
 
+#else
+void MX_GPIO_Init(void);
+#endif
 #ifdef __cplusplus
 }
 #endif

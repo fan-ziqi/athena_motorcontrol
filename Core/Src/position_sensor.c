@@ -11,7 +11,16 @@
 #include "hw_config.h"
 #include "user_config.h"
 
+#define PARD_BIT		0x8000
+#define READ_BIT		0x4000
+#define READ_NOP		(0x0000 | READ_BIT | PARD_BIT)
+#define READ_DIAAGC		(0x3FFC | READ_BIT | PARD_BIT)
+#define READ_MAG		(0x3FFD | READ_BIT)
+#define READ_ANGLEUNC	(0x3FFE | READ_BIT)
+#define READ_ANGLECOM	(0x3FFF | READ_BIT | PARD_BIT)
+
 void ps_warmup(EncoderStruct * encoder, int n){
+#ifdef STM32F446
 	/* Hall position sensors noisy on startup.  Take a bunch of samples to clear this data */
 	for(int i = 0; i<n; i++){
 		encoder->spi_tx_word = 0x0000;
@@ -20,6 +29,69 @@ void ps_warmup(EncoderStruct * encoder, int n){
 		while( ENC_SPI.State == HAL_SPI_STATE_BUSY );  					// wait for transmission complete
 		HAL_GPIO_WritePin(ENC_CS, GPIO_PIN_SET ); 	// CS high
 	}
+#else
+
+	for (int i = 0; i < n; i++)
+	{
+		encoder->spi_tx_word = READ_ANGLECOM;
+
+		SPI_SET_NSS_LOW(ENC_CS);
+
+		spi_transmit_receive(ENC_SPI, &encoder->spi_tx_word, &encoder->spi_rx_word);
+
+		SPI_SET_NSS_HIGH(ENC_CS);
+
+#ifdef DEBUG_PS
+		uint16_t raw = encoder->spi_rx_word & 0x3FFF;
+		info("ANGLECOM: raw: %04x angle: %d\r\n", raw, (int)(360.0f * raw / 0x3FFF));
+		delay_1ms(200);
+#endif
+	}
+
+#ifdef DEBUG_PS
+
+	encoder->spi_tx_word = READ_DIAAGC;
+
+	SPI_SET_NSS_LOW(ENC_CS);
+
+	spi_transmit_receive(ENC_SPI, &encoder->spi_tx_word, &encoder->spi_rx_word);
+
+	SPI_SET_NSS_HIGH(ENC_CS);
+
+	info("DIAAGC: %04x\r\n", encoder->spi_rx_word);
+
+	encoder->spi_tx_word = READ_MAG;
+
+	SPI_SET_NSS_LOW(ENC_CS);
+
+	spi_transmit_receive(ENC_SPI, &encoder->spi_tx_word, &encoder->spi_rx_word);
+
+	SPI_SET_NSS_HIGH(ENC_CS);
+
+	info("MAG: %04x\r\n", encoder->spi_rx_word);
+
+	encoder->spi_tx_word = READ_ANGLEUNC;
+
+	SPI_SET_NSS_LOW(ENC_CS);
+
+	spi_transmit_receive(ENC_SPI, &encoder->spi_tx_word, &encoder->spi_rx_word);
+
+	SPI_SET_NSS_HIGH(ENC_CS);
+
+	info("ANGLEUNC: %04x\r\n", encoder->spi_rx_word);
+
+	encoder->spi_tx_word = READ_ANGLECOM;
+
+	SPI_SET_NSS_LOW(ENC_CS);
+
+	spi_transmit_receive(ENC_SPI, &encoder->spi_tx_word, &encoder->spi_rx_word);
+
+	SPI_SET_NSS_HIGH(ENC_CS);
+
+	info("ANGLECOM: %04x\r\n", encoder->spi_rx_word);
+#endif
+
+#endif
 }
 
 void ps_sample(EncoderStruct * encoder, float dt){
@@ -33,12 +105,24 @@ void ps_sample(EncoderStruct * encoder, float dt){
 	//memmove(&encoder->angle_multiturn[1], &encoder->angle_multiturn[0], (N_POS_SAMPLES-1)*sizeof(float)); // this is much slower for some reason
 
 	/* SPI read/write */
+#ifdef STM32F446
 	encoder->spi_tx_word = ENC_READ_WORD;
 	HAL_GPIO_WritePin(ENC_CS, GPIO_PIN_RESET ); 	// CS low
 	HAL_SPI_TransmitReceive(&ENC_SPI, (uint8_t*)encoder->spi_tx_buff, (uint8_t *)encoder->spi_rx_buff, 1, 100);
 	while( ENC_SPI.State == HAL_SPI_STATE_BUSY );  					// wait for transmission complete
 	HAL_GPIO_WritePin(ENC_CS, GPIO_PIN_SET ); 	// CS high
 	encoder->raw = encoder ->spi_rx_word;
+#else
+	encoder->spi_tx_word = READ_ANGLECOM;
+
+	SPI_SET_NSS_LOW(ENC_CS);
+
+	spi_transmit_receive(ENC_SPI, &encoder->spi_tx_word, &encoder->spi_rx_word);
+
+	SPI_SET_NSS_HIGH(ENC_CS);
+
+	encoder->raw = (encoder->spi_rx_word & 0x3FFF) << 2;
+#endif
 
 	/* Linearization */
 	int off_1 = encoder->offset_lut[(encoder->raw)>>9];				// lookup table lower entry
@@ -94,12 +178,21 @@ void ps_sample(EncoderStruct * encoder, float dt){
 
 }
 
-void ps_print(EncoderStruct * encoder, int dt_ms){
-	printf("Raw: %d", encoder->raw);
-	printf("   Linearized Count: %d", encoder->count);
-	printf("   Single Turn: %f", encoder->angle_singleturn);
-	printf("   Multiturn: %f", encoder->angle_multiturn[0]);
-	printf("   Electrical: %f", encoder->elec_angle);
-	printf("   Turns:  %d\r\n", encoder->turns);
-	//HAL_Delay(dt_ms);
+void ps_print(EncoderStruct * encoder, int loop_count){
+
+	#define PS_PRINT_INTERVAL 10000
+	static uint32_t ps_print_mark = 0;
+
+	if (loop_count < ps_print_mark + PS_PRINT_INTERVAL) {
+		return;
+	}
+
+	printf("Raw: %5d", encoder->raw);
+	printf("  Linearized Count: %5d", encoder->count);
+	printf("  Single Turn:% 4.3f", encoder->angle_singleturn);
+	printf("  Multi Turn:% 5.3f", encoder->angle_multiturn[0]);
+	printf("  Electrical:% 5.3f", encoder->elec_angle);
+	printf("  Turns:% 2d\r\n", encoder->turns);
+
+	ps_print_mark = loop_count;
 }

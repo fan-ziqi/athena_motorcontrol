@@ -13,15 +13,15 @@
 
 #define V_CAL 	1.0f							// Calibration voltage
 //#define I_CAL	5.0f
-#define W_CAL 	10.0f							// Calibration speed in rad/s
+#define W_CAL 	TWO_PI_F						// Calibration speed in rad/s
 #define T1		1.0f							// Cal settling period
-#define PPAIRS_MAX 64
+#define PPAIRS_MAX 21
 #define SAMPLES_PER_PPAIR N_LUT
 #define N_CAL SAMPLES_PER_PPAIR*PPAIRS_MAX		// Calibration lookup table maximum length, so I don't have to deal with dynamic allocation based on number of pole pairs
 
 typedef struct{
 	uint8_t ppairs;									// number of pole pairs measured
-	int offset;								// electrical zero position in counts
+	int offset;										// electrical zero position in counts
 	float theta_ref;								// reference angle used for calibration
 	int start_count;								// loop count at cal start
 	uint8_t started;								// has cal started or not?

@@ -9,7 +9,6 @@
 #define INC_POSITION_SENSOR_H_
 
 
-//#include "structs.h"
 #include "spi.h"
 #include <stdint.h>
 

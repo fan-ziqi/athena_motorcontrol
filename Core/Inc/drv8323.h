@@ -37,6 +37,7 @@
 #define PWM_1X_COM_ASYNC    0x1
 #define PWM_1X_DIR_0        0x0     /// In 1x PWM mode this bit is ORed with the INHC (DIR) input
 #define PWM_1X_DIR_1        0x1
+#define CLR_FLT_RST         0x1     /// Clear latched fault bits
 
 /// Gate Drive HS Fields ///
 #define LOCK_ON             0x6
@@ -171,6 +172,8 @@ typedef struct{
 		uint16_t spi_rx_word;
 	};
 	uint16_t fault;
+	uint16_t fsr1;
+	uint16_t fsr2;
 } DRVStruct;
 
 
@@ -187,7 +190,11 @@ void drv_write_CSACR(DRVStruct drv, int CSA_FET, int VREF_DIV, int LS_REF, int C
 void drv_enable_gd(DRVStruct drv);
 void drv_disable_gd(DRVStruct drv);
 void drv_calibrate(DRVStruct drv);
-void drv_print_faults(DRVStruct drv);
+void drv_print_faults(DRVStruct drv, uint32_t loop_count);
+void drv_init_config(DRVStruct drv);
+void drv_clear_fault(DRVStruct drv);
+
+void MX_EXTI_Init();
 
 
 

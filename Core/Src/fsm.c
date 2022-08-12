@@ -53,7 +53,7 @@
 				 preference_writer_flush(&prefs);
 				 preference_writer_close(&prefs);
 				 preference_writer_load(prefs);
-				 update_fsm(fsmstate, 27);
+				 update_fsm(fsmstate, ESC_CMD);
 			 }
 
 			 break;
@@ -76,7 +76,7 @@
 			 break;
 
 		 case ENCODER_MODE:
-			 ps_print(&comm_encoder, 100);
+			 ps_print(&comm_encoder, controller.loop_count);
 			 break;
 
 		 case INIT_TEMP_MODE:
@@ -90,7 +90,7 @@
 	  * Do necessary setup   */
 
 		switch(fsmstate->state){
-				case MENU_MODE:
+			case MENU_MODE:
 				//printf("Entering Main Menu\r\n");
 				enter_menu_state();
 				break;
@@ -104,7 +104,9 @@
 			case MOTOR_MODE:
 
 				//printf("Entering Motor Mode\r\n");
+#ifdef STM32F446
 				HAL_GPIO_WritePin(LED, GPIO_PIN_SET );
+#endif
 				reset_foc(&controller);
 				drv_enable_gd(drv);
 				break;
@@ -147,7 +149,9 @@
 					drv_disable_gd(drv);
 					reset_foc(&controller);
 					//printf("Leaving Motor Mode\r\n");
+#ifdef STM32F446
 					HAL_GPIO_WritePin(LED, GPIO_PIN_RESET );
+#endif
 				//}
 				zero_commands(&controller);		// Set commands to zero
 				break;
@@ -167,7 +171,7 @@
 	 /*update_fsm is only run when new state-change information is received
 	  * on serial terminal input or CAN input
 	  */
-	if(fsm_input == MENU_CMD){	// escape to exit to rest mode
+	if(fsm_input == ESC_CMD){	// escape to exit to rest mode
 		fsmstate->next_state = MENU_MODE;
 		fsmstate->ready = 0;
 		return;
@@ -232,14 +236,14 @@
 	    //drv.disable_gd();
 	    //reset_foc(&controller);
 	    //gpio.enable->write(0);
-	    printf("\n\r\n\r");
-	    printf(" Commands:\n\r");
-	    printf(" m - Motor Mode\n\r");
-	    printf(" c - Calibrate Encoder\n\r");
-	    printf(" s - Setup\n\r");
-	    printf(" e - Display Encoder\n\r");
-	    printf(" z - Set Zero Position\n\r");
-	    printf(" esc - Exit to Menu\n\r");
+	    printf("\r\n");
+	    printf(" Commands:\r\n");
+	    printf(" m   - Motor Mode\r\n");
+	    printf(" c   - Calibrate Encoder\r\n");
+	    printf(" s   - Setup\r\n");
+	    printf(" e   - Display Encoder\r\n");
+	    printf(" z   - Set Zero Position\r\n");
+	    printf(" esc - Exit to Menu\r\n");
 
 	    //gpio.led->write(0);
  }
@@ -258,7 +262,7 @@
 	    printf(" %-4s %-31s %-5s %-6s %.1f\n\r", "x", "Max Position Gain (N-m/rad)", "0.0", "1000.0", KP_MAX);
 	    printf(" %-4s %-31s %-5s %-6s %.1f\n\r", "d", "Max Velocity Gain (N-m/rad/s)", "0.0", "5.0", KD_MAX);
 	    printf(" %-4s %-31s %-5s %-6s %.1f\n\r", "f", "FW Current Limit (A)", "0.0", "33.0", I_FW_MAX);
-	    //printf(" %-4s %-31s %-5s %-6s %.1f\n\r", "h", "Temp Cutoff (C) (0 = none)", "0", "150", TEMP_MAX);
+	    printf(" %-4s %-31s %-5s %-6s %.1f\n\r", "h", "Temp Cutoff (C) (0 = none)", "0", "150", TEMP_MAX);
 	    printf(" %-4s %-31s %-5s %-6s %.1f\n\r", "c", "Continuous Current (A)", "0.0", "40.0", I_MAX_CONT);
 	    printf(" %-4s %-31s %-5s %-6s %.1f\n\r", "a", "Calibration Current (A)", "0.0", "20.0", I_CAL);
 	    printf("\r\n CAN:\r\n");
@@ -336,7 +340,7 @@
 			 printf("V_MAX set to %f\r\n", V_MAX);
 			 break;
 		 default:
-			 printf("\n\r '%c' Not a valid command prefix\n\r\n\r", fsmstate->cmd_buff);
+			 printf("\r\n '%c' Not a valid command prefix\r\n\r\n", fsmstate->cmd_id);
 			 break;
 
 		 }

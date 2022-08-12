@@ -27,8 +27,14 @@
 extern "C" {
 #endif
 
+#ifdef STM32F446
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
+#else
+#include <stdio.h>
+#include "gd32f30x.h"
+#include "systick.h"
+#endif
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -58,6 +64,7 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#ifdef STM32F446
 #define B1_Pin GPIO_PIN_13
 #define B1_GPIO_Port GPIOC
 #define USART_TX_Pin GPIO_PIN_2
@@ -70,8 +77,20 @@ void Error_Handler(void);
 #define TCK_GPIO_Port GPIOA
 #define SWO_Pin GPIO_PIN_3
 #define SWO_GPIO_Port GPIOB
+#else
+#define SVPWM_PERIOD 2000 // 30kHz, TODO
+
+// "CAN_TIMEOUT" redefined in gd32f30x_can.h 
+#undef CAN_TIMEOUT
+#endif
 /* USER CODE BEGIN Private defines */
 
+#define debug printf
+#define info printf
+
+#define VERSION_MAJOR 2
+#define VERSION_MINOR 0
+#define VERSION_PATCH 1
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

@@ -20,6 +20,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "spi.h"
 
+#ifdef STM32F446
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
@@ -194,3 +195,45 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* spiHandle)
 /* USER CODE BEGIN 1 */
 
 /* USER CODE END 1 */
+
+#else
+void MX_SPI1_Init(void)
+{
+  /* SPI1 for DRV8323RS */
+  spi_parameter_struct spi_init_struct;
+
+  spi_i2s_deinit(SPI1);
+
+  spi_init_struct.device_mode = SPI_MASTER;
+  spi_init_struct.trans_mode = SPI_TRANSMODE_FULLDUPLEX;
+  spi_init_struct.frame_size = SPI_FRAMESIZE_16BIT;
+  spi_init_struct.nss = SPI_NSS_SOFT;
+  spi_init_struct.endian = SPI_ENDIAN_MSB;
+  spi_init_struct.clock_polarity_phase = SPI_CK_PL_LOW_PH_2EDGE;
+  spi_init_struct.prescale = SPI_PSC_8;
+
+  spi_init(SPI1, &spi_init_struct);
+
+  spi_enable(SPI1);
+}
+
+void MX_SPI2_Init(void)
+{
+  /* SPI2 for AS5047P */
+  spi_parameter_struct spi_init_struct;
+
+  spi_i2s_deinit(SPI2);
+
+  spi_init_struct.device_mode = SPI_MASTER;
+  spi_init_struct.trans_mode = SPI_TRANSMODE_FULLDUPLEX;
+  spi_init_struct.frame_size = SPI_FRAMESIZE_16BIT;
+  spi_init_struct.nss = SPI_NSS_SOFT;
+  spi_init_struct.endian = SPI_ENDIAN_MSB;
+  spi_init_struct.clock_polarity_phase = SPI_CK_PL_LOW_PH_2EDGE;
+  spi_init_struct.prescale = SPI_PSC_8;
+
+  spi_init(SPI2, &spi_init_struct);
+
+  spi_enable(SPI2);
+}
+#endif

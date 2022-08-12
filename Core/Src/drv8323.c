@@ -8,23 +8,36 @@
 
 #include "drv8323.h"
 #include <stdio.h>
-#include "usart.h"
+#include "structs.h"
 #include "hw_config.h"
+#include "user_config.h"
 
 uint16_t drv_spi_write(DRVStruct * drv, uint16_t val){
+#ifdef STM32F446
 	drv->spi_tx_word = val;
 	HAL_GPIO_WritePin(DRV_CS, GPIO_PIN_RESET ); 	// CS low
 	HAL_SPI_TransmitReceive(&DRV_SPI, (uint8_t*)drv->spi_tx_buff, (uint8_t *)drv->spi_rx_buff, 1, 100);
 	while( DRV_SPI.State == HAL_SPI_STATE_BUSY );  					// wait for transmission complete
 	HAL_GPIO_WritePin(DRV_CS, GPIO_PIN_SET ); 	// CS high
 	return drv->spi_rx_word;
+#else
+	drv->spi_tx_word = val;
+
+	SPI_SET_NSS_LOW(DRV_CS);
+
+	spi_transmit_receive(DRV_SPI, &drv->spi_tx_word, &drv->spi_rx_word);
+
+	SPI_SET_NSS_HIGH(DRV_CS);
+
+	return drv->spi_rx_word;
+#endif
 }
 uint16_t drv_read_FSR1(DRVStruct drv){
-	return drv_spi_write(&drv, (1<<15)|FSR1);
+	return drv_spi_write(&drv, (1 << 15) | (FSR1 << 11));
 }
 
 uint16_t drv_read_FSR2(DRVStruct drv){
-	return drv_spi_write(&drv, (1<<15)|FSR2);
+	return drv_spi_write(&drv, (1 << 15) | (FSR2 << 11));
 }
 
 uint16_t drv_read_register(DRVStruct drv, int reg){
@@ -65,9 +78,13 @@ void drv_calibrate(DRVStruct drv){
 	uint16_t val = (0x1<<4) + (0x1<<3) + (0x1<<2);
 	drv_write_register(drv, CSACR, val);
 }
-void drv_print_faults(DRVStruct drv){
+void drv_print_faults(DRVStruct drv, uint32_t loop_count){
     uint16_t val1 = drv_read_FSR1(drv);
     uint16_t val2 = drv_read_FSR2(drv);
+
+	if ((val1 | val2) > 0) {
+		printf("loop_count: %lu\r\n", loop_count);
+	}
 
     if(val1 & (1<<10)){printf("\n\rFAULT\n\r");}
 
@@ -94,4 +111,49 @@ void drv_print_faults(DRVStruct drv){
     if(val2 & (1<<1)){printf("VGS_HC\n\r");}
     if(val2 & (1)){printf("VGS_LC\n\r");}
 
+}
+
+void drv_init_config(DRVStruct drv)
+{
+	/* DRV8323 setup */
+
+	// Up to 40A use 40X amplifier gain
+	// From 40-60A use 20X amplifier gain.  (Make this generic in the future)
+	int CSA_GAIN = I_MAX <= 40.0f ? CSA_GAIN_40 : CSA_GAIN_20;
+
+	// Enable DRV8323
+	gpio_bit_set(ENABLE_PIN);
+	delay_1ms(10);
+
+	// Driver Control, Gate drive fault is disabled, 3x PWM mode, clear latched fault bits
+	drv_write_DCR(drv, 0x0, DIS_GDF_EN, 0x0, PWM_MODE_3X, 0x0, 0x0, 0x0, 0x0, CLR_FLT_RST);
+
+	// CSA Control, VREF_DIV=2, CSA_GAIN, CSA_CAL_A/B/C, SEN_LVL=0.25v
+	drv_write_CSACR(drv, 0x0, VREF_DIV_2, 0x0, CSA_GAIN, 0x0, 0x1, 0x1, 0x1, SEN_LVL_0_25);
+
+	zero_current(&controller);
+
+	// CSA Control, VREF_DIV=2, CSA_GAIN, DIS_SEN, SEN_LVL=0.25v
+	drv_write_CSACR(drv, 0x0, VREF_DIV_2, 0x0, CSA_GAIN, 0x1, 0x0, 0x0, 0x0, SEN_LVL_0_25);
+	// drv_write_CSACR(drv, 0x0, 0x1, 0x0, CSA_GAIN, 0x0, 0x0, 0x0, 0x0, SEN_LVL_0_25);
+
+	// OCP Contro, TRETRY=50us, DEAD_TIME=50us, OCP_MODE=retry, OCP_DEG=4us, VDS_LVL=0.45v
+	drv_write_OCPCR(drv, TRETRY_50US, DEADTIME_50NS, OCP_RETRY, OCP_DEG_4US, VDS_LVL_0_45);
+
+	// all MOSFETs in the Hi-Z state, disable output
+	drv_disable_gd(drv);
+}
+
+void drv_clear_fault(DRVStruct drv)
+{
+	uint16_t val = (drv_read_register(drv, DCR)) | CLR_FLT_RST;
+	drv_write_register(drv, DCR, val);
+}
+
+void MX_EXTI_Init()
+{
+	gpio_exti_source_select(GPIO_PORT_SOURCE_GPIOA, GPIO_PIN_SOURCE_12);
+
+	exti_init(EXTI_12, EXTI_INTERRUPT, EXTI_TRIG_BOTH);
+	exti_interrupt_flag_clear(EXTI_12);
 }

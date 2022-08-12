@@ -28,6 +28,7 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
+#ifdef STM32F446
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
@@ -46,6 +47,28 @@ void MX_SPI3_Init(void);
 /* USER CODE BEGIN Prototypes */
 
 /* USER CODE END Prototypes */
+
+#else
+#define SPI_SET_NSS_HIGH(x)          gpio_bit_set(x)
+#define SPI_SET_NSS_LOW(x)           gpio_bit_reset(x)
+
+inline int spi_transmit_receive(uint32_t spi_periph, uint16_t *tx_data, uint16_t *rx_data)
+{
+  
+  while (RESET == spi_i2s_flag_get(spi_periph, SPI_FLAG_TBE));
+
+  spi_i2s_data_transmit(spi_periph, *tx_data);
+
+  while (RESET == spi_i2s_flag_get(spi_periph, SPI_FLAG_RBNE));
+
+  *rx_data = spi_i2s_data_receive(spi_periph);
+
+  return 0;
+}
+
+void MX_SPI1_Init(void);
+void MX_SPI2_Init(void);
+#endif
 
 #ifdef __cplusplus
 }

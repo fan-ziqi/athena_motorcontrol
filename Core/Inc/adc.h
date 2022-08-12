@@ -32,6 +32,7 @@ extern "C" {
 
 /* USER CODE END Includes */
 
+#ifdef STM32F446
 extern ADC_HandleTypeDef hadc1;
 
 extern ADC_HandleTypeDef hadc2;
@@ -45,6 +46,31 @@ extern ADC_HandleTypeDef hadc3;
 void MX_ADC1_Init(void);
 void MX_ADC2_Init(void);
 void MX_ADC3_Init(void);
+#else
+struct adc01_data_t
+{
+  uint16_t hall0;
+  uint16_t hall3;
+  uint16_t hall2;
+  uint16_t hall5;
+  uint16_t hall4;
+  uint16_t hall1;
+  uint16_t temp_pcb;
+  uint16_t temp_motor;
+};
+
+union adc01_dma_t
+{
+  uint32_t raw[4];
+  struct adc01_data_t data;
+};
+
+extern union adc01_dma_t adc01;
+extern uint16_t vbus_voltage;
+
+void MX_ADC01_Init(void);
+void MX_ADC2_Init(void);
+#endif
 
 /* USER CODE BEGIN Prototypes */
 

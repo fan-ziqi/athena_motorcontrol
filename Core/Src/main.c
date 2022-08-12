@@ -32,13 +32,21 @@
 #include "usart.h"
 #include "gpio.h"
 
+#ifdef STM32F446
+#else
+#include "gd32f30x.h"
+#include "systick.h"
+#endif
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "structs.h"
 #include <stdio.h>
 #include <string.h>
 
+#ifdef STM32F446
 #include "stm32f4xx_flash.h"
+#endif
 #include "flash_writer.h"
 #include "position_sensor.h"
 #include "preference_writer.h"
@@ -88,19 +96,31 @@ FSMStruct state;
 EncoderStruct comm_encoder;
 DRVStruct drv;
 CalStruct comm_encoder_cal;
+
+#ifdef STM32F446
 CANTxMessage can_tx;
 CANRxMessage can_rx;
+#else
+can_trasnmit_message_struct can_tx;
+can_receive_message_struct can_rx;
+#endif
 
 /* init but don't allocate calibration arrays */
 int *error_array = NULL;
 int *lut_array = NULL;
 
+#ifdef STM32F446
 uint8_t Serial2RxBuffer[1];
+#endif
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
+#ifdef STM32F446
 void SystemClock_Config(void);
+#else
+void MX_RCU_Init(void);
+#endif
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -119,6 +139,7 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
+#ifdef STM32F446
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -149,7 +170,27 @@ int main(void)
   MX_ADC1_Init();
   MX_ADC2_Init();
   MX_ADC3_Init();
+#else
+  systick_config();
+
+  MX_RCU_Init();
+  MX_GPIO_Init();
+  MX_USART1_Init();
+  MX_TIM0_Init();
+  MX_CAN0_Init();
+  MX_SPI1_Init();
+  MX_SPI2_Init();
+  MX_ADC01_Init();
+  MX_ADC2_Init();
+  MX_EXTI_Init();
+#endif
   /* USER CODE BEGIN 2 */
+
+
+  info("\r\n\r\n\r\n\r\n\r\n");
+  info(">> Athean Motor Controller <<\r\n");
+  info(">> Version: %d.%d.%d <<\r\n",
+      VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
 
   /* Load settings from flash */
   preference_writer_init(&prefs, 6);
@@ -178,6 +219,7 @@ int main(void)
   if(isnan(V_MAX)){V_MAX = 65.0f;}
   if(isnan(V_MIN)){V_MIN = -65.0f;}
 
+#ifdef STM32F446
   printf("\r\nFirmware Version Number: %.2f\r\n", VERSION_NUM);
 
   /* Controller Setup */
@@ -187,6 +229,7 @@ int main(void)
   else{
 
   }
+#endif
 
   init_controller_params(&controller);
 
@@ -199,10 +242,23 @@ int main(void)
   comm_encoder.ppairs = PPAIRS;
   ps_warmup(&comm_encoder, 100);			// clear the noisy data when the encoder first turns on
 
-  if(EN_ENC_LINEARIZATION){memcpy(&comm_encoder.offset_lut, &ENCODER_LUT, sizeof(comm_encoder.offset_lut));}	// Copy the linearization lookup table
-  else{memset(&comm_encoder.offset_lut, 0, sizeof(comm_encoder.offset_lut));}
-  //for(int i = 0; i<128; i++){printf("%d\r\n", comm_encoder.offset_lut[i]);}
+  if (EN_ENC_LINEARIZATION) {
+    // Copy the linearization lookup table
+    memcpy(&comm_encoder.offset_lut, &ENCODER_LUT, sizeof(comm_encoder.offset_lut));
+  } else {
+    memset(&comm_encoder.offset_lut, 0, sizeof(comm_encoder.offset_lut));
+  }
 
+#ifdef DEBUG_PS
+  for (int i = 0; i < 8; i++) {
+    for (int j = 0; j < 16; j++) {
+      printf("%d ", comm_encoder.offset_lut[i * 16 + j]);
+    }
+    printf("\r\n");
+  }
+#endif
+
+#ifdef STM32F446
   /* Turn on ADCs */
   HAL_ADC_Start(&hadc1);
   HAL_ADC_Start(&hadc2);
@@ -274,12 +330,86 @@ int main(void)
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
+#else
+
+  drv_init_config(drv);
+
+#ifdef DEBUG_ADC
+  info("ADC OFFSET  B: %d  C: %d\r\n",
+      controller.adc_b_offset, controller.adc_c_offset);
+#endif
+
+  /* CAN setup */
+  can_rx_init(&can_rx);
+  can_tx_init(&can_tx);
+
+  /* Turn on Interrupts */
+  nvic_irq_enable(TIMER0_UP_IRQn, 0U, 0);
+  nvic_irq_enable(EXTI10_15_IRQn, 0U, 1);
+  nvic_irq_enable(USBD_LP_CAN0_RX0_IRQn, 0U, 2);
+  nvic_irq_enable(USART1_IRQn, 2U, 0);
+
+  /* Start the FSM */
+  state.state = INIT_TEMP_MODE;
+  state.next_state = MENU_MODE;
+  state.ready = 1;
+
+  uint32_t loop_count = 0;
+  FlagStatus status = RESET;
+
+  while (1)
+  {
+    delay_1ms(1000);
+    loop_count += 1;
+
+    if (drv.fault != 0)
+      drv_print_faults(drv, loop_count);
+
+    if (status == RESET && state.state != MOTOR_MODE) {
+      gpio_bit_reset(GPIOC, GPIO_PIN_13);
+    } else {
+      gpio_bit_set(GPIOC, GPIO_PIN_13);
+    }
+
+#ifdef DEBUG_TIMER
+    static uint32_t i = 0;
+    debug("loop count %lu\r\n", controller.loop_count - i);
+    i = controller.loop_count;
+#endif
+
+#ifdef DEBUG_ADC
+    float temperature = (1.45 - adc01.data.temp * 3.3 / 4096) * 1000 / 4.1 + 25;
+    float vref = (adc01.data.vref * 3.3 / 4096);
+
+    info("hall: %u %u %u %u %u %u\r\n",
+      adc01.data.hall0, adc01.data.hall1, adc01.data.hall2,
+      adc01.data.hall3, adc01.data.hall4, adc01.data.hall5);
+    info("temp: %2.2f  vref: %2.2f\r\n", temperature, vref);
+    info("%u %u\r\n", adc01.data.temp, adc01.data.vref);
+    float R1 = 15.0;
+    float R2 = 1.0;
+    info("vbus: %2.2f\r\n", (vbus_voltage / 4095.0f * 3.3) * (R1 + R2) / R2);
+
+    info("i_a: %2.2f i_b: %2.2f i_c: %2.2f v_bus: %2.2f\r\n",
+      controller.i_a, controller.i_b, controller.i_c, controller.v_bus);
+
+    debug("%d %d\r\n", controller.adc_a_raw, controller.adc_b_raw);
+
+
+    adc_software_trigger_enable(ADC0, ADC_REGULAR_CHANNEL);
+    adc_software_trigger_enable(ADC2, ADC_REGULAR_CHANNEL);
+#endif
+
+    status = ~status;
+  }
+#endif
 }
 
 /**
   * @brief System Clock Configuration
   * @retval None
   */
+#ifdef STM32F446
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -328,6 +458,28 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 }
+#else
+void MX_RCU_Init(void)
+{
+    /* config ADC clock */
+  rcu_adc_clock_config(RCU_CKADC_CKAPB2_DIV4);
+
+  rcu_periph_clock_enable(RCU_AF);
+  rcu_periph_clock_enable(RCU_GPIOA);
+  rcu_periph_clock_enable(RCU_GPIOB);
+  rcu_periph_clock_enable(RCU_GPIOC);
+  rcu_periph_clock_enable(RCU_DMA0);
+  rcu_periph_clock_enable(RCU_DMA1);
+  rcu_periph_clock_enable(RCU_CAN0);
+  rcu_periph_clock_enable(RCU_SPI1);
+  rcu_periph_clock_enable(RCU_SPI2);
+  rcu_periph_clock_enable(RCU_TIMER0);
+  rcu_periph_clock_enable(RCU_ADC0);
+  rcu_periph_clock_enable(RCU_ADC1);
+  rcu_periph_clock_enable(RCU_ADC2);
+  rcu_periph_clock_enable(RCU_USART1);
+}
+#endif
 
 /* USER CODE BEGIN 4 */
 

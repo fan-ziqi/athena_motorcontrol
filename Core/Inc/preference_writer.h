@@ -42,7 +42,9 @@ PreferenceWriter::PreferenceWriter(uint32_t sector) {
 */
 typedef struct{
 	FlashWriter fw;
+#ifdef STM32F446
 	uint32_t sector;
+#endif
 	bool ready;
 }PreferenceWriter;
 

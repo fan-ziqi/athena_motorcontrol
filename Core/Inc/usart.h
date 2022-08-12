@@ -32,6 +32,7 @@ extern "C" {
 
 /* USER CODE END Includes */
 
+#ifdef STM32F446
 extern UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN Private defines */
@@ -45,6 +46,9 @@ void MX_USART2_UART_Init(void);
 int __io_putchar(int ch);
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 /* USER CODE END Prototypes */
+#else
+void MX_USART1_Init(void);
+#endif
 
 #ifdef __cplusplus
 }

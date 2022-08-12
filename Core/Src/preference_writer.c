@@ -19,7 +19,9 @@ PreferenceWriter::PreferenceWriter(uint32_t sector) {
 
 void preference_writer_init(PreferenceWriter * pr, uint32_t sector){
 	flash_writer_init(&pr->fw, sector);
+#ifdef STM32F446
 	pr->sector = sector;
+#endif
 }
 
 

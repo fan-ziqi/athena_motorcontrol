@@ -20,9 +20,11 @@ TARGET = motorcontrol
 # building variables
 ######################################
 # debug build?
-DEBUG = 1
+# DEBUG = 1
 # optimization
-OPT = -Og
+# OPT = -Og
+OPT = -O2
+OPT += -fsingle-precision-constant
 
 
 #######################################
@@ -43,8 +45,6 @@ Core/Src/can.c \
 Core/Src/spi.c \
 Core/Src/tim.c \
 Core/Src/usart.c \
-Core/Src/stm32f4xx_it.c \
-Core/Src/stm32f4xx_hal_msp.c \
 Core/Src/calibration.c \
 Core/Src/drv8323.c \
 Core/Src/flash_writer.c \
@@ -53,35 +53,39 @@ Core/Src/fsm.c \
 Core/Src/math_ops.c \
 Core/Src/position_sensor.c \
 Core/Src/preference_writer.c \
-Core/Src/stm32f4xx_flash.c \
 Core/Src/syscalls.c \
 Core/Src/sysmem.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_ll_adc.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ex.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ramfunc.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma_ex.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr_ex.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_exti.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_can.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_spi.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c \
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c \
-Core/Src/system_stm32f4xx.c  
+Core/Src/systick.c \
+Core/Src/gd32f30x_it.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_adc.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_bkp.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_can.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_crc.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_ctc.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_dac.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_dbg.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_dma.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_enet.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_exmc.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_exti.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_fmc.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_fwdgt.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_gpio.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_i2c.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_misc.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_pmu.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_rcu.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_rtc.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_sdio.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_spi.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_timer.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_usart.c \
+Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_wwdgt.c \
+Firmware/CMSIS/GD/GD32F30x/Source/system_gd32f30x.c
 
 # ASM sources
 ASM_SOURCES =  \
-startup_stm32f446xx.s
+startup_gd32f30x_hd.s
 
 
 #######################################
@@ -125,8 +129,7 @@ AS_DEFS =
 
 # C defines
 C_DEFS =  \
--DUSE_HAL_DRIVER \
--DSTM32F446xx
+-DGD32F30X_HD
 
 
 # AS includes
@@ -135,10 +138,9 @@ AS_INCLUDES =
 # C includes
 C_INCLUDES =  \
 -ICore/Inc \
--IDrivers/STM32F4xx_HAL_Driver/Inc \
--IDrivers/STM32F4xx_HAL_Driver/Inc/Legacy \
--IDrivers/CMSIS/Device/ST/STM32F4xx/Include \
--IDrivers/CMSIS/Include
+-IFirmware/GD32F30x_standard_peripheral/Include \
+-IFirmware/CMSIS/GD/GD32F30x/Include \
+-IFirmware/CMSIS
 
 
 # compile gcc flags
@@ -159,12 +161,15 @@ CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 # LDFLAGS
 #######################################
 # link script
-LDSCRIPT = STM32F446RETx_FLASH.ld
+LDSCRIPT = GD32F303RETx_FLASH.ld
 
 # libraries
 LIBS = -lc -lm -lnosys 
 LIBDIR = 
 LDFLAGS = $(MCU) -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections
+
+# printf support float, 6Kbytes
+LDFLAGS += -u _printf_float
 
 # default action: build all
 all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin

@@ -69,6 +69,10 @@ void order_phases(EncoderStruct *encoder, ControllerStruct *controller, CalStruc
 
 void calibrate_encoder(EncoderStruct *encoder, ControllerStruct *controller, CalStruct * cal, int loop_count){
 	/* Calibrates e-zero and encoder nonliearity */
+	if (PPAIRS > PPAIRS_MAX) {
+		printf("Pole Pairs > %d, remalloc error_arr[] size.\r\n", PPAIRS_MAX);
+		return;
+	}
 
 	if(!cal->started){
 			printf("Starting offset cal and linearization\r\n");

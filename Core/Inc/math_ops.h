@@ -4,9 +4,15 @@
 #define SQRT3 		1.73205080757f
 #define SQRT3_2 	0.86602540378f
 #define SQRT1_3		0.57735026919f
+#ifdef STM32F446
 #define PI_F 		3.14159274101f
 #define TWO_PI_F 	6.28318548203f
 #define PI_OVER_2_F	1.57079632679f
+#else
+#define PI_F 		3.1415926535897932f
+#define TWO_PI_F 	6.2831853071795865f
+#define PI_OVER_2_F	1.5707963267948966f
+#endif
 #define LUT_MULT	81.4873308631f
 
 #include "math.h"

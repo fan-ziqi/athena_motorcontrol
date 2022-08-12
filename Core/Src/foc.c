@@ -27,6 +27,8 @@ void set_dtc(ControllerStruct *controller){
 		dtc_w = 1.0f - controller->dtc_w;
 	}
 	/* Handle phase order swapping so that voltage/current/torque match encoder direction */
+
+#ifdef STM32F446
 	if(!PHASE_ORDER){
 		__HAL_TIM_SET_COMPARE(&TIM_PWM, TIM_CH_U, ((TIM_PWM.Instance->ARR))*dtc_u);
 		__HAL_TIM_SET_COMPARE(&TIM_PWM, TIM_CH_V, ((TIM_PWM.Instance->ARR))*dtc_v);
@@ -37,11 +39,24 @@ void set_dtc(ControllerStruct *controller){
 		__HAL_TIM_SET_COMPARE(&TIM_PWM, TIM_CH_U, ((TIM_PWM.Instance->ARR))*dtc_v);
 		__HAL_TIM_SET_COMPARE(&TIM_PWM, TIM_CH_W, ((TIM_PWM.Instance->ARR))*dtc_w);
 	}
+#else
+	if(!PHASE_ORDER){
+		timer_channel_output_pulse_value_config(TIMER0, TIM_CH_U, SVPWM_PERIOD * dtc_u);
+		timer_channel_output_pulse_value_config(TIMER0, TIM_CH_V, SVPWM_PERIOD * dtc_v);
+		timer_channel_output_pulse_value_config(TIMER0, TIM_CH_W, SVPWM_PERIOD * dtc_w);
+	}
+	else{
+		timer_channel_output_pulse_value_config(TIMER0, TIM_CH_V, SVPWM_PERIOD * dtc_u);
+		timer_channel_output_pulse_value_config(TIMER0, TIM_CH_U, SVPWM_PERIOD * dtc_v);
+		timer_channel_output_pulse_value_config(TIMER0, TIM_CH_W, SVPWM_PERIOD * dtc_w);
+	}
+#endif
 }
 
 void analog_sample (ControllerStruct *controller){
 	/* Sampe ADCs */
 	/* Handle phase order swapping so that voltage/current/torque match encoder direction */
+#ifdef STM32F446
 	if(!PHASE_ORDER){
 		controller->adc_a_raw = HAL_ADC_GetValue(&ADC_CH_IA);
 		controller->adc_b_raw = HAL_ADC_GetValue(&ADC_CH_IB);
@@ -63,6 +78,33 @@ void analog_sample (ControllerStruct *controller){
     controller->i_a = controller->i_scale*(float)(controller->adc_a_raw - controller->adc_a_offset);    // Calculate phase currents from ADC readings
     controller->i_b = controller->i_scale*(float)(controller->adc_b_raw - controller->adc_b_offset);
     controller->i_c = -controller->i_a - controller->i_b;
+#else
+	if(!PHASE_ORDER){
+		controller->adc_b_raw = adc_inserted_data_read(ADC_CH_IB, ADC_INSERTED_CHANNEL_0);
+		controller->adc_c_raw = adc_inserted_data_read(ADC_CH_IC, ADC_INSERTED_CHANNEL_0);
+	}
+	else{
+		controller->adc_b_raw = adc_inserted_data_read(ADC_CH_IC, ADC_INSERTED_CHANNEL_0);
+		controller->adc_c_raw = adc_inserted_data_read(ADC_CH_IB, ADC_INSERTED_CHANNEL_0);
+	}
+
+    adc_software_trigger_enable(ADC_CH_MAIN, ADC_INSERTED_CHANNEL);
+    adc_software_trigger_enable(ADC_CH_VBUS, ADC_INSERTED_CHANNEL);
+
+    while(!(SET == adc_flag_get(ADC_CH_MAIN, ADC_FLAG_EOIC)));
+    while(!(SET == adc_flag_get(ADC_CH_VBUS, ADC_FLAG_EOIC)));
+
+    adc_flag_clear(ADC_CH_MAIN, ADC_FLAG_EOIC);
+    adc_flag_clear(ADC_CH_VBUS, ADC_FLAG_EOIC);
+
+	controller->adc_vbus_raw = adc_inserted_data_read(ADC_CH_VBUS, ADC_INSERTED_CHANNEL_0);
+    controller->v_bus = (float)controller->adc_vbus_raw * V_SCALE;
+
+    // Calculate phase currents from ADC readings
+    controller->i_b = controller->i_scale * (float)(controller->adc_b_raw - controller->adc_b_offset);
+    controller->i_c = controller->i_scale * (float)(controller->adc_c_raw - controller->adc_c_offset);
+    controller->i_a = -controller->i_b - controller->i_c;
+#endif
 
 }
 
@@ -109,8 +151,13 @@ void svm(float v_max, float u, float v, float w, float *dtc_u, float *dtc_v, flo
 void zero_current(ControllerStruct *controller){
 	/* Measure zero-current ADC offset */
 
+#ifdef STM32F446
     int adc_a_offset = 0;
     int adc_b_offset = 0;
+#else
+    int adc_b_offset = 0;
+    int adc_c_offset = 0;
+#endif
     int n = 1000;
     controller->dtc_u = 0.f;
     controller->dtc_v = 0.f;
@@ -119,11 +166,21 @@ void zero_current(ControllerStruct *controller){
 
     for (int i = 0; i<n; i++){               // Average n samples
     	analog_sample(controller);
-    	adc_a_offset +=  controller->adc_a_raw;
+#ifdef STM32F446
+    	adc_a_offset += controller->adc_a_raw;
     	adc_b_offset += controller->adc_b_raw;
+#else
+    	adc_b_offset += controller->adc_b_raw;
+        adc_c_offset += controller->adc_c_raw;
+#endif
      }
+#ifdef STM32F446
     controller->adc_a_offset = adc_a_offset/n;
     controller->adc_b_offset = adc_b_offset/n;
+#else
+    controller->adc_b_offset = adc_b_offset/n;
+    controller->adc_c_offset = adc_c_offset/n;
+#endif
 
     }
 
@@ -147,9 +204,15 @@ void init_controller_params(ControllerStruct *controller){
 
 void reset_foc(ControllerStruct *controller){
 
+#ifdef STM32F446
 	TIM_PWM.Instance->CCR3 = ((TIM_PWM.Instance->ARR))*(0.5f);
 	TIM_PWM.Instance->CCR1 = ((TIM_PWM.Instance->ARR))*(0.5f);
 	TIM_PWM.Instance->CCR2 = ((TIM_PWM.Instance->ARR))*(0.5f);
+#else
+    timer_channel_output_pulse_value_config(TIMER0, TIM_CH_U, SVPWM_PERIOD * 0.5f);
+	timer_channel_output_pulse_value_config(TIMER0, TIM_CH_V, SVPWM_PERIOD * 0.5f);
+	timer_channel_output_pulse_value_config(TIMER0, TIM_CH_W, SVPWM_PERIOD * 0.5f);
+#endif
     controller->i_d_des = 0;
     controller->i_q_des = 0;
     controller->i_d = 0;
