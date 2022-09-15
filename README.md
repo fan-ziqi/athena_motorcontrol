@@ -1,7 +1,9 @@
 # 铁蛋电机控制
-2022.09.15 添加注释，整理代码格式 by @fan-ziqi
+2022.09.15 添加注释，整理代码格式 by @[fan-ziqi](https://github.com/fan-ziqi)
 
-2022.08.26 Keil版本，删除F4相关代码 by @fan-ziqi
+2022.08.26 Keil版本，删除F4相关代码 by @[fan-ziqi](https://github.com/fan-ziqi)
+
+2022.08.12 第一版，适配铁蛋电机 by @[zbwu](https://github.com/zbwu)
 
 
 
