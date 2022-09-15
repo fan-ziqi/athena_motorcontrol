@@ -28,7 +28,7 @@ float roundf(float x){
     }
   */
 void limit_norm(float *x, float *y, float limit){
-    /// Scales the lenght of vector (x, y) to be <= limit ///
+    /// 将向量 (x, y) 的长度缩放为 <= limit ///
     float norm = sqrtf(*x * *x + *y * *y);
     if(norm > limit){
         *x = *x * limit/norm;
@@ -56,12 +56,12 @@ float uint_to_float(int x_int, float x_min, float x_max, int bits){
     }
 
 float sin_lut(float theta){
-	theta = fmodf(theta, TWO_PI_F);
-	theta = theta<0 ? theta + TWO_PI_F : theta;
+	theta = fmodf(theta, PI_BY2_F);
+	theta = theta<0 ? theta + PI_BY2_F : theta;
 
 	return sin_tab[(int) (LUT_MULT*theta)];
 }
 
 float cos_lut(float theta){
-	return sin_lut(PI_OVER_2_F - theta);
+	return sin_lut(PI_DIV2_F - theta);
 }

@@ -115,15 +115,15 @@ void ps_sample(EncoderStruct * encoder, float dt){
 	/* Real angles in radians */
 	encoder->angle_singleturn = ((float)(encoder->count-M_ZERO))/((float)ENC_CPR);
 	int int_angle = encoder->angle_singleturn;
-	encoder->angle_singleturn = TWO_PI_F*(encoder->angle_singleturn - (float)int_angle);
-	//encoder->angle_singleturn = TWO_PI_F*fmodf(((float)(encoder->count-M_ZERO))/((float)ENC_CPR), 1.0f);
-	encoder->angle_singleturn = encoder->angle_singleturn<0 ? encoder->angle_singleturn + TWO_PI_F : encoder->angle_singleturn;
+	encoder->angle_singleturn = PI_BY2_F*(encoder->angle_singleturn - (float)int_angle);
+	//encoder->angle_singleturn = PI_BY2_F*fmodf(((float)(encoder->count-M_ZERO))/((float)ENC_CPR), 1.0f);
+	encoder->angle_singleturn = encoder->angle_singleturn<0 ? encoder->angle_singleturn + PI_BY2_F : encoder->angle_singleturn;
 
 	encoder->elec_angle = (encoder->ppairs*(float)(encoder->count-E_ZERO))/((float)ENC_CPR);
 	int_angle = (int)encoder->elec_angle;
-	encoder->elec_angle = TWO_PI_F*(encoder->elec_angle - (float)int_angle);
-	//encoder->elec_angle = TWO_PI_F*fmodf((encoder->ppairs*(float)(encoder->count-E_ZERO))/((float)ENC_CPR), 1.0f);
-	encoder->elec_angle = encoder->elec_angle<0 ? encoder->elec_angle + TWO_PI_F : encoder->elec_angle;	// Add 2*pi to negative numbers
+	encoder->elec_angle = PI_BY2_F*(encoder->elec_angle - (float)int_angle);
+	//encoder->elec_angle = PI_BY2_F*fmodf((encoder->ppairs*(float)(encoder->count-E_ZERO))/((float)ENC_CPR), 1.0f);
+	encoder->elec_angle = encoder->elec_angle<0 ? encoder->elec_angle + PI_BY2_F : encoder->elec_angle;	// Add 2*pi to negative numbers
 	/* Rollover */
 	int rollover = 0;
 	float angle_diff = encoder->angle_singleturn - encoder->old_angle;
@@ -138,7 +138,7 @@ void ps_sample(EncoderStruct * encoder, float dt){
 
 
 	/* Multi-turn position */
-	encoder->angle_multiturn[0] = encoder->angle_singleturn + TWO_PI_F*(float)encoder->turns;
+	encoder->angle_multiturn[0] = encoder->angle_singleturn + PI_BY2_F*(float)encoder->turns;
 
 	/* Velocity */
 	/*

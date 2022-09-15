@@ -9,11 +9,11 @@ void CAN0_Init(void)
     can_parameter_struct            can_parameter;
     can_struct_para_init(CAN_INIT_STRUCT, &can_parameter);
     
-    /* initialize CAN register */
+    /* 初始化can寄存器 */
     can_deinit(CAN0);
     
-    /* initialize CAN */
-    /* baudrate 1Mbps */
+    /* 初始化CAN */
+    /* 波特率 1Mbps */
     can_parameter.working_mode = CAN_NORMAL_MODE;
     can_parameter.resync_jump_width = CAN_BT_SJW_1TQ;
     can_parameter.time_segment_1 = CAN_BT_BS1_5TQ;
@@ -22,7 +22,6 @@ void CAN0_Init(void)
     can_parameter.auto_bus_off_recovery = DISABLE;
     can_parameter.auto_wake_up = DISABLE;
 		can_parameter.auto_retrans = ENABLE;
-//    can_parameter.no_auto_retrans = DISABLE;
     can_parameter.rec_fifo_overwrite = DISABLE;
     can_parameter.trans_fifo_order = DISABLE;
     can_parameter.prescaler = 6;
@@ -38,7 +37,7 @@ void can_rx_init(can_receive_message_struct *msg)
     can_filter_parameter_struct     can_filter;
     can_struct_para_init(CAN_FILTER_STRUCT, &can_filter);
 
-    /* initialize filter */    
+    /* 初始化can滤波器 */    
     can_filter.filter_list_high = CAN_ID << 5;
     can_filter.filter_list_low = 0x0000;
     can_filter.filter_mask_high = 0xFFE0;

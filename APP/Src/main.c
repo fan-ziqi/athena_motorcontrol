@@ -2,7 +2,6 @@
 /// Written by Ben Katz, with much inspiration from Bayley Wang, Nick Kirkby, Shane Colton, David Otten, and others
 /// Hardware documentation can be found at build-its.blogspot.com
 
-/* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
 #include "can.h"
@@ -33,15 +32,14 @@
 #define VERSION_NUM 2.0f
 
 
-/* Flash Registers */
+//Flash寄存器
 float __float_reg[64];
 int __int_reg[256];
 PreferenceWriter prefs;
 
 int count = 0;
 
-/* Structs for control, etc */
-
+//一些控制使用到的结构体
 ControllerStruct controller;
 ObserverStruct observer;
 COMStruct com;
@@ -53,16 +51,13 @@ CalStruct comm_encoder_cal;
 can_trasnmit_message_struct can_tx;
 can_receive_message_struct can_rx;
 
-/* init but don't allocate calibration arrays */
+//初始化但不分配校准数组
 int *error_array = NULL;
 int *lut_array = NULL;
 
 void RCU_Init(void);
 
-/**
-  * @brief  The application entry point.
-  * @retval int
-  */
+
 int main(void)
 {
   systick_config();
@@ -83,11 +78,11 @@ int main(void)
   info(">> Version: %d.%d.%d <<\r\n",
       VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
 
-  /* Load settings from flash */
+  //从Flash中加载设置
   preference_writer_init(&prefs, 6);
   preference_writer_load(prefs);
 
-  /* Sanitize configs in case flash is empty*/
+  //若Flash为空则重置配置
   if(E_ZERO==-1){E_ZERO = 0;}
   if(M_ZERO==-1){M_ZERO = 0;}
   if(isnan(I_BW) || I_BW==-1){I_BW = 1000;}
@@ -112,19 +107,24 @@ int main(void)
 
   init_controller_params(&controller);
 
-  /* calibration "encoder" zeroing */
+  //校准编码器零位
   memset(&comm_encoder_cal.cal_position, 0, sizeof(EncoderStruct));
 
-  /* commutation encoder setup */
+  /*换向编码器设置*/
   comm_encoder.m_zero = M_ZERO;
   comm_encoder.e_zero = E_ZERO;
   comm_encoder.ppairs = PPAIRS;
-  ps_warmup(&comm_encoder, 100);			// clear the noisy data when the encoder first turns on
+	
+	//编码器首次开启时清除噪声数据
+  ps_warmup(&comm_encoder, 100);
 
-  if (EN_ENC_LINEARIZATION) {
-    // Copy the linearization lookup table
+  if (EN_ENC_LINEARIZATION)
+	{
+    //拷贝线性化查找表
     memcpy(&comm_encoder.offset_lut, &ENCODER_LUT, sizeof(comm_encoder.offset_lut));
-  } else {
+  }
+	else
+	{
     memset(&comm_encoder.offset_lut, 0, sizeof(comm_encoder.offset_lut));
   }
 
@@ -145,17 +145,17 @@ int main(void)
       controller.adc_b_offset, controller.adc_c_offset);
 #endif
 
-  /* CAN setup */
+  /* CAN 初始化 */
   can_rx_init(&can_rx);
   can_tx_init(&can_tx);
 
-  /* Turn on Interrupts */
+  /* 开启中断 */
   nvic_irq_enable(TIMER0_UP_IRQn, 0U, 0);
   nvic_irq_enable(EXTI10_15_IRQn, 0U, 1);
   nvic_irq_enable(USBD_LP_CAN0_RX0_IRQn, 0U, 2);
   nvic_irq_enable(USART1_IRQn, 2U, 0);
 
-  /* Start the FSM */
+  /* 启动FSM */
   state.state = INIT_TEMP_MODE;
   state.next_state = MENU_MODE;
   state.ready = 1;
@@ -171,9 +171,12 @@ int main(void)
     if (drv.fault != 0)
       drv_print_faults(drv, loop_count);
 
-    if (status == RESET && state.state != MOTOR_MODE) {
+    if (status == RESET && state.state != MOTOR_MODE)
+		{
       gpio_bit_reset(GPIOC, GPIO_PIN_13);
-    } else {
+    }
+		else
+		{
       gpio_bit_set(GPIOC, GPIO_PIN_13);
     }
 
@@ -212,14 +215,8 @@ int main(void)
 
 }
 
-/**
-  * @brief System Clock Configuration
-  * @retval None
-  */
-
 void RCU_Init(void)
 {
-    /* config ADC clock */
   rcu_adc_clock_config(RCU_CKADC_CKAPB2_DIV4);
 
   rcu_periph_clock_enable(RCU_AF);

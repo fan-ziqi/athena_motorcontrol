@@ -168,7 +168,7 @@ void USBD_LP_CAN0_RX0_IRQHandler(void)
           can_rx.rx_data[4], can_rx.rx_data[5], can_rx.rx_data[6], can_rx.rx_data[7]);
 #endif
 
-    // Pack response
+    // 包响应
     pack_reply(&can_tx, CAN_ID, comm_encoder.angle_multiturn[0] / GR, comm_encoder.velocity / GR, controller.i_q_filt * KT * GR);
     can_message_transmit(CAN0, &can_tx);
 
@@ -177,28 +177,32 @@ void USBD_LP_CAN0_RX0_IRQHandler(void)
             comm_encoder.angle_multiturn[0] / GR, comm_encoder.velocity / GR, controller.i_q_filt * KT * GR);
 #endif
 
-    /* Check for special Commands */
-    if (*((uint32_t *)&can_rx.rx_data[0]) == 0xFFFFFFFF && (*((uint32_t *)&can_rx.rx_data[4]) & 0x00FFFFFF) == 0x00FFFFFF) {
-        switch (can_rx.rx_data[7])
-        {
-        case 0xFC:
-            update_fsm(&state, MOTOR_CMD);
-            break;
-        
-        case 0xFD:
-            update_fsm(&state, ESC_CMD);
-            break;
-        
-        case 0xFE:
-            update_fsm(&state, ZERO_CMD);
-            break;
-        
-        default:
-            break;
-        }
-    } else {
-        unpack_cmd(can_rx, controller.commands); // Unpack commands
-        controller.timeout = 0;                  // Reset timeout counter
+    /* 检查特殊命令 */
+    if (*((uint32_t *)&can_rx.rx_data[0]) == 0xFFFFFFFF && 
+			 (*((uint32_t *)&can_rx.rx_data[4]) & 0x00FFFFFF) == 0x00FFFFFF)
+		{
+			switch (can_rx.rx_data[7])
+			{
+			case 0xFC:
+					update_fsm(&state, MOTOR_CMD);
+					break;
+			
+			case 0xFD:
+					update_fsm(&state, ESC_CMD);
+					break;
+			
+			case 0xFE:
+					update_fsm(&state, ZERO_CMD);
+					break;
+			
+			default:
+					break;
+			}
+    }
+		else
+		{
+			unpack_cmd(can_rx, controller.commands); // 命令解包
+			controller.timeout = 0;                  // 重置超时计数器
 
 #ifdef DEBUG_CAN
         debug("CAN RX P:%.3f V:%.3f KP:%.3f KD:%.3f I:%.3f\r\n",
@@ -215,13 +219,13 @@ void TIMER0_UP_IRQHandler(void)
         gpio_bit_set(GPIOC, GPIO_PIN_13);
     }
 
-	/* Sample ADCs */
+	/* ADC 采样 */
 	analog_sample(&controller);
 
-	/* Sample position sensor */
+	/* 位置传感器采样 */
 	ps_sample(&comm_encoder, DT);
 
-	/* Run Finite State Machine */
+	/* 运行有限状态机 Finite State Machine */
 	run_fsm(&state);
 
 #ifdef DEBUG_TIMER
@@ -244,27 +248,32 @@ void EXTI10_15_IRQHandler(void)
 {
     exti_interrupt_flag_clear(EXTI_12);
 
-    if (RESET == exti_interrupt_flag_get(EXTI_12)) {
-        // DRV8323 fault
-        drv.fsr1 = drv_read_FSR1(drv);
-        drv.fsr2 = drv_read_FSR2(drv);
-        drv.fault = (drv.fsr1 >> 10) & 1;
-        if (drv.fault) {
-            debug("Fault FSR1: %04x FSR2: %04x\r\n", drv.fsr1, drv.fsr2);
-        }
-    } else {
-        // DRV8323 recovery, clear fault bit
-        drv_clear_fault(drv);
-        drv.fault = 0;
-        debug("Recovery\r\n");
+    if (RESET == exti_interrupt_flag_get(EXTI_12)) 
+		{
+			// DRV8323 错误
+			drv.fsr1 = drv_read_FSR1(drv);
+			drv.fsr2 = drv_read_FSR2(drv);
+			drv.fault = (drv.fsr1 >> 10) & 1;
+			if (drv.fault)
+			{
+				debug("Fault FSR1: %04x FSR2: %04x\r\n", drv.fsr1, drv.fsr2);
+			}
+    } 
+		else
+		{
+			// DRV8323 恢复, 清除错误位
+			drv_clear_fault(drv);
+			drv.fault = 0;
+			debug("Recovery\r\n");
     }
 }
 
 void USART1_IRQHandler(void)
 {
-    if(RESET != usart_interrupt_flag_get(USART1, USART_INT_FLAG_RBNE)){
-        /* receive data */
-        char c = usart_data_receive(USART1);
+    if(RESET != usart_interrupt_flag_get(USART1, USART_INT_FLAG_RBNE))
+		{
+			//串口控制有限状态机
+			char c = usart_data_receive(USART1);
 	    update_fsm(&state, c);
     }
 }

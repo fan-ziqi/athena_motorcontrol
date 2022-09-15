@@ -1,5 +1,7 @@
-# motorcontrol
-20222.08.26 Keil版本，删除F4相关代码 by Fan-ziqi
+# 铁蛋电机控制
+2022.09.15 添加注释，整理代码格式 by @fan-ziqi
+
+2022.08.26 Keil版本，删除F4相关代码 by @fan-ziqi
 
 
 
